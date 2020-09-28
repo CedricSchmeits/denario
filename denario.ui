@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <author>Cedric Schmeits</author>
+ <class>Denario</class>
+ <widget class="QMainWindow" name="Denario">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>802</width>
+    <height>283</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Denario</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QGridLayout" name="gridLayout">
+    <item row="0" column="0">
+     <layout class="QGridLayout" name="gridLayout_2">
+      <item row="0" column="0">
+       <widget class="CandleChart" name="widget" native="true"/>
+      </item>
+     </layout>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>802</width>
+     <height>24</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menutest">
+    <property name="title">
+     <string>test</string>
+    </property>
+   </widget>
+   <addaction name="menutest"/>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>CandleChart</class>
+   <extends>QWidget</extends>
+   <header>candlechart.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+ <slots>
+  <slot>OnStartStopPressed()</slot>
+  <slot>OnCheckState()</slot>
+  <slot>OnAddTimeTracer()</slot>
+  <slot>OnShowTraceVariables()</slot>
+  <slot>OnAddTransferFunction()</slot>
+  <slot>OnAddTraceVar()</slot>
+  <slot>OnMoverIdChanged()</slot>
+  <slot>OnExport()</slot>
+  <slot>OnDelTraceVar(QListWidgetItem*)</slot>
+  <slot>OnImport()</slot>
+  <slot>OnAddFrequency()</slot>
+ </slots>
+</ui>

@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>CandleChart</class>
+ <widget class="QWidget" name="CandleChart">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1026</width>
+    <height>529</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Chart</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="0" column="1">
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QComboBox" name="cmbTimeFrame">
+       <property name="editable">
+        <bool>false</bool>
+       </property>
+       <property name="currentText">
+        <string>1 hour</string>
+       </property>
+       <property name="currentIndex">
+        <number>6</number>
+       </property>
+       <item>
+        <property name="text">
+         <string>1 minute</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>3 minutes</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>5 minutes</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>10 minutes</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>15 minutes</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>30 minutes</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>1 hour</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>2 hours</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>4 hours</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>6 hours</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>12 hours</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>1 day</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>3 days</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>1 week</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>2 weeks</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string extracomment="1 month">1 month</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnAutoZoom">
+       <property name="text">
+        <string>Auto</string>
+       </property>
+       <property name="checkable">
+        <bool>true</bool>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+       <property name="default">
+        <bool>false</bool>
+       </property>
+       <property name="flat">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+   <item row="1" column="0">
+    <layout class="QVBoxLayout" name="verticalLayout">
+     <item>
+      <widget class="QToolButton" name="toolButton_2">
+       <property name="text">
+        <string>...</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="verticalSpacer">
+       <property name="orientation">
+        <enum>Qt::Vertical</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>20</width>
+         <height>40</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
+   </item>
+   <item row="1" column="1">
+    <widget class="PlotWidget" name="gpvChart">
+     <property name="verticalScrollBarPolicy">
+      <enum>Qt::ScrollBarAlwaysOff</enum>
+     </property>
+     <property name="horizontalScrollBarPolicy">
+      <enum>Qt::ScrollBarAlwaysOff</enum>
+     </property>
+     <property name="renderHints">
+      <set>QPainter::Antialiasing|QPainter::TextAntialiasing</set>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>PlotWidget</class>
+   <extends>QGraphicsView</extends>
+   <header>pyqtgraph.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>
