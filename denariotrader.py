@@ -26,6 +26,7 @@ __all__ = ["DenarioTrader"]
 from PyQt5.QtCore import QObject
 
 from typing import Any, Dict
+from datetime import datetime, timedelta
 import ccxt
 
 from config import Config
@@ -59,6 +60,9 @@ class DenarioTrader(QObject):
 
         # start a worker process to move the received stream_data from the stream_buffer to a print function
         self.__exchange = exchange
+        self.__tickers = dict()
+        self.UpdateTickers(True)
+
 
     def __Shutdown(self):
         """Shutdown method"""
@@ -67,6 +71,19 @@ class DenarioTrader(QObject):
     @property
     def exchange(self):
         return self.__exchange
+
+    @property
+    def tickers(self) -> Dict:
+        return self.UpdateTickers()
+
+    def UpdateTickers(self, force=False):
+        """Updating of the tickers"""
+        if self.__exchange.has['fetchTickers']:
+            # Only update the tickers once every 5 minutes
+            if force or (datetime.now() - self.__tickersUpdateTime) > timedelta(minutes=5):
+                self.__tickers = self.__exchange.fetchTickers()
+                self.__tickersUpdateTime = datetime.fromtimestamp(next(iter(self.__tickers.values()))['timestamp']/1000)
+        return self.__tickers
 
     @classmethod
     def StartUp(cls, options):

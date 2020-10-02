@@ -18,8 +18,11 @@
    <layout class="QGridLayout" name="gridLayout">
     <item row="0" column="0">
      <layout class="QGridLayout" name="gridLayout_2">
+      <item row="0" column="1">
+       <widget class="CandleChart" name="wgtChart" native="true"/>
+      </item>
       <item row="0" column="0">
-       <widget class="CandleChart" name="widget" native="true"/>
+       <widget class="SelectSymbol" name="wgtSelectSymbol" native="true"/>
       </item>
      </layout>
     </item>
@@ -48,6 +51,12 @@
    <class>CandleChart</class>
    <extends>QWidget</extends>
    <header>candlechart.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>SelectSymbol</class>
+   <extends>QWidget</extends>
+   <header>selectsymbol.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

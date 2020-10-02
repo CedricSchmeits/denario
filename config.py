@@ -27,6 +27,7 @@ import json
 import os
 import argparse
 import sys
+from PyQt5.QtGui import QColor
 
 def _ShowLicense():
     print("""    Denario  Copyright (C) 2020  Cedric Schmeits <cedric@aerofx.nl>
@@ -72,9 +73,34 @@ class Config:
                         Config.__instance = json.load(fHandle)
                         if args.exchange:
                             Config.__instance['exchange']['name'] = args.exchange
+                        Config.FillPalletDefaults()
                 else:
                     raise Exception("file {} does not exists".format(configFile))
         return Config.__instance
+
+    @classmethod
+    def FillPalletDefaults(cls):
+        if 'pallet' not in Config.__instance:
+            Config.__instance['pallet'] = dict()
+
+        defaultPallet = {'positive':    QColor(38, 166, 154),   # green
+                         'negative':    QColor(244, 67, 36),    # red
+                         'rowOdd':      QColor(24, 0, 0),       # dark red
+                         'rowEven':     QColor(0, 0, 24)        # dark blue
+                        }
+
+        # convert pallet values to colors
+        for name, color in Config.__instance['pallet'].items():
+            if isinstance(color, (list, tupple)):
+                Config.__instance['pallet'][name] = QColor(*color)
+            else:
+                Config.__instance['pallet'][name] = QColor(color)
+
+            if name in defaultPallet:
+                defaultPallet.pop(name)
+
+        Config.__instance['pallet'].update(defaultPallet)
+
 
     def __getitem__(self, key):
         pass

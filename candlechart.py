@@ -22,35 +22,43 @@ from datetime import datetime, timedelta
 from PyQt5.uic import loadUi
 from PyQt5.QtWidgets import QWidget
 from PyQt5.QtGui import QColor, QPainter, QPicture
-from PyQt5.QtCore import Qt, QDateTime, QPointF, QRectF
+from PyQt5.QtCore import Qt, QDateTime, QPointF, QRectF, pyqtSlot
 import pyqtgraph as pg
 
 from denariotrader import DenarioTrader
 from timeaxis import DateTimeAxisItem
 import pickle
+from config import Config
 
 
 class CandlestickItem(pg.GraphicsObject):
     def __init__(self, data):
         pg.GraphicsObject.__init__(self)
         self.data = data  ## data must have fields: time, open, close, min, max
+        pallet = Config()['pallet']
+        self.__redPen = pg.mkPen(pallet['negative'])
+        self.__redBrush = pg.mkBrush(pallet['negative'])
+        self.__greenPen = pg.mkPen(pallet['positive'])
+        self.__greenBrush = pg.mkBrush(pallet['positive'])
         self.generatePicture()
 
     def generatePicture(self):
         ## pre-computing a QPicture object allows paint() to run much more quickly,
         ## rather than re-drawing the shapes every time.
+        print("generatePicture")
         self.picture = QPicture()
         painter = QPainter(self.picture)
-        painter.setPen(pg.mkPen('w'))
         width = (self.data[1][0] - self.data[0][0]) / 3000.
         for (timestamp, open, high, low, close, _volume) in self.data:
             timestamp /= 1000
             #print(t, open, high, low, close)
-            painter.drawLine(QPointF(timestamp, low), QPointF(timestamp, high))
             if open > close:
-                painter.setBrush(pg.mkBrush('r'))
+                painter.setBrush(self.__redBrush)
+                painter.setPen(self.__redPen)
             else:
-                painter.setBrush(pg.mkBrush('g'))
+                painter.setBrush(self.__greenBrush)
+                painter.setPen(self.__greenPen)
+            painter.drawLine(QPointF(timestamp, low), QPointF(timestamp, high))
             painter.drawRect(QRectF(timestamp - width, open, width * 2, close - open))
         painter.end()
 
@@ -83,25 +91,27 @@ class CandleChart(QWidget):
         self.__plotItem.setAutoVisible(x=None, y=True)
         self.__plotItem.setMouseEnabled(y=False)
         self.__plotItem.setAxisItems({'bottom': self.__timeAxis})
+        self.__plotItem.showAxis("right", True)
+        self.__plotItem.showAxis("left", False)
         self.__plotItem.showGrid(x=True, y=True)
         #self.gpvChart.setState({'autoVisibleOnly': [False, True]})
 
+        self.__currentCandles = None
+
         self.UpdateSymbol()
 
-
+    @pyqtSlot(str)
     def UpdateSymbol(self, symbol : str = "BTC/USDT") -> None:
         timeFrame, _dTime = self.timeFrame
-        if os.path.exists("ohlcv.bin"):
-            with open("ohlcv.bin", 'rb') as ohlcvFile:
-                ohlcv = pickle.load(ohlcvFile)
-        else:
-            ohlcv = self.__exchange.fetchOHLCV(symbol, timeFrame, limit=self.limit)
-            with open("ohlcv.bin", 'wb') as ohlcvFile:
-                #print(ohlcv)
-                pickle.dump(ohlcv, ohlcvFile)
 
-        item = CandlestickItem(ohlcv)
-        self.gpvChart.addItem(item)
+        ohlcv = self.__exchange.fetchOHLCV(symbol, timeFrame, limit=self.limit)
+
+        if self.__currentCandles is not None:
+            self.gpvChart.removeItem(self.__currentCandles)
+            self.__currentCandles = None
+
+        self.__currentCandles = CandlestickItem(ohlcv)
+        self.gpvChart.addItem(self.__currentCandles)
 
 
     def mouseReleaseEvent(self, event):
