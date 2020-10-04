@@ -59,8 +59,8 @@ def Main():
     # setting theme
     app.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt5'))
 
-    pg.setConfigOption('background', 'k')
-    pg.setConfigOption('foreground', 'w')
+    pg.setConfigOption('background', config['pallet']['background'])
+    pg.setConfigOption('foreground', config['pallet']['foreground'])
     # Enable antialiasing for prettier plots
     pg.setConfigOptions(antialias=True)
     #pg.setConfigOptions(useOpenGL=True) # borders don't match candles in openGL....

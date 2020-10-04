@@ -190,5 +190,25 @@
   </customwidget>
  </customwidgets>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>cmbTimeFrame</sender>
+   <signal>activated(QString)</signal>
+   <receiver>CandleChart</receiver>
+   <slot>ChangedTimeframe(QString)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>97</x>
+     <y>23</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>512</x>
+     <y>264</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+ <slots>
+  <slot>ChangedTimeframe(QString)</slot>
+ </slots>
 </ui>

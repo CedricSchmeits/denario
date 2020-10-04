@@ -30,17 +30,31 @@ from timeaxis import DateTimeAxisItem
 import pickle
 from config import Config
 
+class TimeFormater:
+    @staticmethod
+    def format(value):
+        valueTime = datetime.fromtimestamp(value)
+        return valueTime.strftime("%x %X")
+
 
 class CandlestickItem(pg.GraphicsObject):
     def __init__(self, data):
         pg.GraphicsObject.__init__(self)
-        self.data = data  ## data must have fields: time, open, close, min, max
+        ## data must have fields: time, open, close, min, max
+        self.data = self.__ProcessData(data)
         pallet = Config()['pallet']
         self.__redPen = pg.mkPen(pallet['negative'])
         self.__redBrush = pg.mkBrush(pallet['negative'])
         self.__greenPen = pg.mkPen(pallet['positive'])
         self.__greenBrush = pg.mkBrush(pallet['positive'])
+
         self.generatePicture()
+
+    def __ProcessData(self, data):
+        result = dict()
+        for (timestamp, open, high, low, close, volume) in data:
+            result[timestamp / 1000] = (open, high, low, close, volume)
+        return result
 
     def generatePicture(self):
         ## pre-computing a QPicture object allows paint() to run much more quickly,
@@ -48,9 +62,9 @@ class CandlestickItem(pg.GraphicsObject):
         print("generatePicture")
         self.picture = QPicture()
         painter = QPainter(self.picture)
-        width = (self.data[1][0] - self.data[0][0]) / 3000.
-        for (timestamp, open, high, low, close, _volume) in self.data:
-            timestamp /= 1000
+        iterator = iter(self.data)
+        width = (next(iterator) - next(iterator)) / -3.
+        for timestamp, (open, high, low, close, _volume) in self.data.items():
             #print(t, open, high, low, close)
             if open > close:
                 painter.setBrush(self.__redBrush)
@@ -81,10 +95,11 @@ class CandleChart(QWidget):
 
         loadUi(os.path.join(os.path.abspath(os.path.dirname(__file__)), "candlechart.ui"), self)
 
+        self.ChangedTimeframe("1 hour")
 
         self.__exchange = DenarioTrader.GetInstance().exchange
 
-        self.__timeAxis = DateTimeAxisItem(self.timeFrame[1], orientation='bottom')
+        self.__timeAxis = DateTimeAxisItem(self.timeDelta, orientation='bottom')
         self.__legends = self.gpvChart.addLegend(offset=(600, 10))
         self.__plotItem = self.gpvChart.getPlotItem()
         self.__plotItem.setLogMode(x=False, y=False)
@@ -94,6 +109,20 @@ class CandleChart(QWidget):
         self.__plotItem.showAxis("right", True)
         self.__plotItem.showAxis("left", False)
         self.__plotItem.showGrid(x=True, y=True)
+        pallet = Config()['pallet']
+        pen = pg.mkPen(pallet['crossBackground'], style=Qt.DashLine)
+        labelOpts={'position': 0.01,
+                   'color': pallet['crossForground'],
+                   'fill': pg.mkBrush(pallet['crossBackground'])}
+        self.__vCrossLine = pg.InfiniteLine(angle=90, movable=False, pen=pen, label=TimeFormater, labelOpts=labelOpts)
+        labelOpts['position'] = 0.97
+        self.__hCrossLine = pg.InfiniteLine(angle=0, movable=False, pen=pen, label="{value}", labelOpts=labelOpts)
+        self.gpvChart.addItem(self.__vCrossLine, ignoreBounds=True)
+        self.gpvChart.addItem(self.__hCrossLine, ignoreBounds=True)
+
+        self.__proxy = pg.SignalProxy(self.gpvChart.scene().sigMouseMoved, rateLimit=15, slot=self.Crosshair)
+        self.gpvChart.setCursor(Qt.CrossCursor)
+
         #self.gpvChart.setState({'autoVisibleOnly': [False, True]})
 
         self.__currentCandles = None
@@ -102,9 +131,9 @@ class CandleChart(QWidget):
 
     @pyqtSlot(str)
     def UpdateSymbol(self, symbol : str = "BTC/USDT") -> None:
-        timeFrame, _dTime = self.timeFrame
-
-        ohlcv = self.__exchange.fetchOHLCV(symbol, timeFrame, limit=self.limit)
+        ohlcv = self.__exchange.fetchOHLCV(symbol, self.timeFrame, limit=self.limit)
+        precision = self.__exchange.markets[symbol]['precision']['price']
+        self.__hCrossLine.label.setFormat(f"{{value:.{precision}f}}")
 
         if self.__currentCandles is not None:
             self.gpvChart.removeItem(self.__currentCandles)
@@ -126,7 +155,15 @@ class CandleChart(QWidget):
                 QApplication.postEvent(serie, ReleasePosEvent(p4))
         QChartView.mouseReleaseEvent(self, event)
 
+    def Crosshair(self, evt):
+        mousepoint = self.__plotItem.vb.mapSceneToView(evt[0])
 
+        crossTime = mousepoint.x()
+        # pick the closest value in the current timeDelta
+        crossTime = min(self.__currentCandles.data.keys(), key=lambda x: abs(x - crossTime))
+
+        self.__vCrossLine.setPos(crossTime)
+        self.__hCrossLine.setPos(mousepoint.y())
 
     #def wheelEvent(self, event):
     #    print(event.angleDelta())
@@ -140,10 +177,8 @@ class CandleChart(QWidget):
 
     #    event.accept()
 
-    @property
-    def timeFrame(self):
-        timeFrame = self.cmbTimeFrame.currentText()
-        number, frame = timeFrame.split()
+    def ChangedTimeframe(self, timeframe: str):
+        number, frame = timeframe.split()
         if "minute" in frame:
             frame = "m"
             dTime = timedelta(minutes=int(number))
@@ -161,4 +196,14 @@ class CandleChart(QWidget):
             dTime = timedelta(days=31 * int(number))
         else:
             raise Exception(f"Unknown timeframe: {timeFrame}")
-        return (f"{number}{frame}", dTime)
+
+        self.__timeFrame = f"{number}{frame}"
+        self.__deltaTime = dTime
+
+    @property
+    def timeFrame(self):
+        return self.__timeFrame
+
+    @property
+    def timeDelta(self):
+        return self.__deltaTime

@@ -83,10 +83,14 @@ class Config:
         if 'pallet' not in Config.__instance:
             Config.__instance['pallet'] = dict()
 
-        defaultPallet = {'positive':    QColor(38, 166, 154),   # green
-                         'negative':    QColor(244, 67, 36),    # red
-                         'rowOdd':      QColor(24, 0, 0),       # dark red
-                         'rowEven':     QColor(0, 0, 24)        # dark blue
+        defaultPallet = {'background':              QColor(29, 32, 32),
+                         'foreground':              QColor(240, 240, 240),
+                         'positive':                QColor(38, 166, 154),   # green
+                         'negative':                QColor(244, 67, 36),    # red
+                         'rowOdd':                  QColor(24, 0, 0),       # dark red
+                         'rowEven':                 QColor(0, 0, 24),       # dark blue
+                         'crossForground':          QColor(38, 38, 38),
+                         'crossBackground':         QColor(182, 182, 182)
                         }
 
         # convert pallet values to colors
