@@ -94,8 +94,10 @@ class CandleChart(QWidget):
         super().__init__(parent)
 
         loadUi(os.path.join(os.path.abspath(os.path.dirname(__file__)), "candlechart.ui"), self)
+        self.symbol = "BTC/USDT"
+        self.__timeFrame = "1h"
+        self.__deltaTime = timedelta(hours=1)
 
-        self.ChangedTimeframe("1 hour")
 
         self.__exchange = DenarioTrader.GetInstance().exchange
 
@@ -127,12 +129,14 @@ class CandleChart(QWidget):
 
         self.__currentCandles = None
 
-        self.UpdateSymbol()
+        self.ChangedTimeframe("1 hour")
 
     @pyqtSlot(str)
-    def UpdateSymbol(self, symbol : str = "BTC/USDT") -> None:
-        ohlcv = self.__exchange.fetchOHLCV(symbol, self.timeFrame, limit=self.limit)
-        precision = self.__exchange.markets[symbol]['precision']['price']
+    def UpdateSymbol(self, symbol : str = None) -> None:
+        if symbol is not None:
+            self.symbol = symbol
+        ohlcv = self.__exchange.fetchOHLCV(self.symbol, self.timeFrame, limit=self.limit)
+        precision = self.__exchange.markets[self.symbol]['precision']['price']
         self.__hCrossLine.label.setFormat(f"{{value:.{precision}f}}")
 
         if self.__currentCandles is not None:
@@ -199,6 +203,7 @@ class CandleChart(QWidget):
 
         self.__timeFrame = f"{number}{frame}"
         self.__deltaTime = dTime
+        self.UpdateSymbol()
 
     @property
     def timeFrame(self):
