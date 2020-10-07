@@ -28,12 +28,15 @@ from PyQt5.QtCore import QObject
 from typing import Any, Dict
 from datetime import datetime, timedelta
 import ccxt
+from pandas import DataFrame, DatetimeIndex, to_datetime
+
 
 from config import Config
 
 
 class DenarioTrader(QObject):
     """Trader class"""
+    DEFAULT_DATAFRAME_COLUMNS = ['date', 'open', 'high', 'low', 'close', 'volume']
     __instance = None
 
     @classmethod
@@ -63,7 +66,6 @@ class DenarioTrader(QObject):
         self.__tickers = dict()
         self.UpdateTickers(True)
 
-
     def __Shutdown(self):
         """Shutdown method"""
         pass
@@ -84,6 +86,22 @@ class DenarioTrader(QObject):
                 self.__tickers = self.__exchange.fetchTickers()
                 self.__tickersUpdateTime = datetime.fromtimestamp(next(iter(self.__tickers.values()))['timestamp']/1000)
         return self.__tickers
+
+    def GetOhlcv(self, symbol, *args, **kwargs) -> DataFrame:
+        """
+        :return: DataFrame
+        """
+        ohlcv = self.__exchange.fetchOHLCV(symbol, *args, **kwargs)
+        df = DataFrame(ohlcv, columns=self.DEFAULT_DATAFRAME_COLUMNS)
+
+        df['date'] = to_datetime(df['date'], unit='ms') #, utc=True, infer_datetime_format=True)
+
+        # Some exchanges return int values for Volume and even for OHLC.
+        # Convert them since TA-LIB indicators used in the strategy assume floats
+        # and fail with exception...
+        df = df.astype(dtype={'open': 'float', 'high': 'float', 'low': 'float', 'close': 'float',
+                              'volume': 'float'})
+        return df
 
     @classmethod
     def StartUp(cls, options):

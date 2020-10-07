@@ -24,6 +24,7 @@ from PyQt5.QtWidgets import QWidget
 from PyQt5.QtGui import QColor, QPainter, QPicture
 from PyQt5.QtCore import Qt, QDateTime, QPointF, QRectF, pyqtSlot
 import pyqtgraph as pg
+from pandas import DataFrame
 
 from denariotrader import DenarioTrader
 from timeaxis import DateTimeAxisItem
@@ -38,10 +39,10 @@ class TimeFormater:
 
 
 class CandlestickItem(pg.GraphicsObject):
-    def __init__(self, data):
+    def __init__(self, data: DataFrame):
         pg.GraphicsObject.__init__(self)
         ## data must have fields: time, open, close, min, max
-        self.data = self.__ProcessData(data)
+        self.data = data
         pallet = Config()['pallet']
         self.__redPen = pg.mkPen(pallet['negative'])
         self.__redBrush = pg.mkBrush(pallet['negative'])
@@ -50,30 +51,22 @@ class CandlestickItem(pg.GraphicsObject):
 
         self.generatePicture()
 
-    def __ProcessData(self, data):
-        result = dict()
-        for (timestamp, open, high, low, close, volume) in data:
-            result[timestamp / 1000] = (open, high, low, close, volume)
-        return result
-
     def generatePicture(self):
         ## pre-computing a QPicture object allows paint() to run much more quickly,
         ## rather than re-drawing the shapes every time.
-        print("generatePicture")
         self.picture = QPicture()
         painter = QPainter(self.picture)
-        iterator = iter(self.data)
-        width = (next(iterator) - next(iterator)) / -3.
-        for timestamp, (open, high, low, close, _volume) in self.data.items():
-            #print(t, open, high, low, close)
-            if open > close:
+        width = (self.data.date[1].timestamp() - self.data.date[0].timestamp()) / 3.
+        for _index, row in self.data.iterrows():
+            if row.open > row.close:
                 painter.setBrush(self.__redBrush)
                 painter.setPen(self.__redPen)
             else:
                 painter.setBrush(self.__greenBrush)
                 painter.setPen(self.__greenPen)
-            painter.drawLine(QPointF(timestamp, low), QPointF(timestamp, high))
-            painter.drawRect(QRectF(timestamp - width, open, width * 2, close - open))
+            date = row.date.timestamp()
+            painter.drawLine(QPointF(date, row.low), QPointF(date, row.high))
+            painter.drawRect(QRectF(date - width, row.open, width * 2, row.close - row.open))
         painter.end()
 
     def paint(self, p, *args):
@@ -98,15 +91,16 @@ class CandleChart(QWidget):
         self.__timeFrame = "1h"
         self.__deltaTime = timedelta(hours=1)
 
-
-        self.__exchange = DenarioTrader.GetInstance().exchange
+        self.__trader = DenarioTrader.GetInstance()
+        self.__exchange = self.__trader.exchange
 
         self.__timeAxis = DateTimeAxisItem(self.timeDelta, orientation='bottom')
         self.__legends = self.gpvChart.addLegend(offset=(600, 10))
         self.__plotItem = self.gpvChart.getPlotItem()
+        self.__plotItem.sigXRangeChanged.connect(self.OnXRangeChanged)
         self.__plotItem.setLogMode(x=False, y=False)
         self.__plotItem.setAutoVisible(x=None, y=True)
-        self.__plotItem.setMouseEnabled(y=False)
+        self.__plotItem.setMouseEnabled(y=False, x=False)
         self.__plotItem.setAxisItems({'bottom': self.__timeAxis})
         self.__plotItem.showAxis("right", True)
         self.__plotItem.showAxis("left", False)
@@ -135,7 +129,8 @@ class CandleChart(QWidget):
     def UpdateSymbol(self, symbol : str = None) -> None:
         if symbol is not None:
             self.symbol = symbol
-        ohlcv = self.__exchange.fetchOHLCV(self.symbol, self.timeFrame, limit=self.limit)
+
+        ohlcv = self.__trader.GetOhlcv(self.symbol, timeframe=self.timeFrame, limit=self.limit)
         precision = self.__exchange.markets[self.symbol]['precision']['price']
         self.__hCrossLine.label.setFormat(f"{{value:.{precision}f}}")
 
@@ -145,6 +140,17 @@ class CandleChart(QWidget):
 
         self.__currentCandles = CandlestickItem(ohlcv)
         self.gpvChart.addItem(self.__currentCandles)
+        xMin = ohlcv.date.iloc[0].timestamp()
+        xMax = ohlcv.date.iloc[-1].timestamp()
+        xDelta = (xMax - xMin) * 0.02
+        yMin = ohlcv.low.min()
+        yMax = ohlcv.high.max()
+        yDelta = (yMax - yMin) * 0.2
+        self.__plotItem.setLimits(xMin=xMin - xDelta,
+                                  xMax=xMax + xDelta,
+                                  yMin=yMin - yDelta,
+                                  yMax=yMax + yDelta)
+        self.OnAutoZoom()
 
 
     def mouseReleaseEvent(self, event):
@@ -162,24 +168,39 @@ class CandleChart(QWidget):
     def Crosshair(self, evt):
         mousepoint = self.__plotItem.vb.mapSceneToView(evt[0])
 
-        crossTime = mousepoint.x()
+        crossTime = datetime.fromtimestamp(mousepoint.x())
         # pick the closest value in the current timeDelta
-        crossTime = min(self.__currentCandles.data.keys(), key=lambda x: abs(x - crossTime))
+        crossTime = min(self.__currentCandles.data.date, key=lambda x: abs(x - crossTime))
 
-        self.__vCrossLine.setPos(crossTime)
+        self.__vCrossLine.setPos(crossTime.timestamp())
         self.__hCrossLine.setPos(mousepoint.y())
 
-    #def wheelEvent(self, event):
-    #    print(event.angleDelta())
-    #    print(dir(self.__plotItem))
-    #    print(self.__plotItem.viewRange())
-        #if event.angleDelta().y() > 0:
-        #    self.plotItem.zoomIn()
-        #else:
-        #    self.plotItem.zoomOut()
-        #self.plotItem.setXRange()
+    def OnAutoZoom(self, toggled=None):
+        toggled = self.btnAutoZoom.isChecked() if toggled is None else toggled
+        if toggled:
+            self.btnAutoZoom.setStyleSheet("color: green;")
+            ranges = self.__plotItem.viewRange()
+            xMin = datetime.fromtimestamp(ranges[0][0])
+            xMax = datetime.fromtimestamp(ranges[0][1])
+            data = self.__currentCandles.data.where((self.__currentCandles.data.date >= xMin) & (self.__currentCandles.data.date <= xMax))
+            self.__plotItem.setYRange(data.low.min(), data.high.max())
+        else:
+            self.btnAutoZoom.setStyleSheet("color: white;")
 
-    #    event.accept()
+    def OnXRangeChanged(self, plotItem, xRange):
+        self.OnAutoZoom()
+
+    def wheelEvent(self, event):
+        yAngle = event.angleDelta().y()
+        if yAngle != 0:
+            direction = yAngle / abs(yAngle)
+
+            xRange = self.__plotItem.viewRange()[0]
+            dRange = xRange[1] - xRange[0]
+            xRange[0] = xRange[1] - (dRange * (1 - (direction * 0.1)))
+            self.__plotItem.setXRange(*xRange, padding=0.0)
+
+            event.accept()
 
     def ChangedTimeframe(self, timeframe: str):
         number, frame = timeframe.split()

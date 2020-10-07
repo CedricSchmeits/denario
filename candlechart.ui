@@ -199,8 +199,25 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>btnAutoZoom</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>CandleChart</receiver>
+   <slot>OnAutoZoom(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>195</x>
+     <y>23</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>512</x>
+     <y>264</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>ChangedTimeframe(QString)</slot>
+  <slot>OnAutoZoom(bool)</slot>
  </slots>
 </ui>
