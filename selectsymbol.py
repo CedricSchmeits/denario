@@ -71,7 +71,6 @@ class TreeSymbolModel(QAbstractTableModel):
         return self.__columnCount
 
     def sort(self, column, order=Qt.AscendingOrder):
-        print(f"sorting: {column} -> {order}")
         self.__sorting = (column, order)
         self.OnSearchChanged(self.__search)
 

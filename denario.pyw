@@ -42,7 +42,8 @@ class Denario(QMainWindow):
         super().__init__(parent)
         loadUi(os.path.join(os.path.abspath(os.path.dirname(__file__)), "denario.ui"), self)
 
-        self.wgtSelectSymbol.symbolSelected.connect(self.wgtChart.UpdateSymbol)
+        self.wgtSelectSymbol.symbolSelected.connect(self.wgtBar.OnShowSymbol)
+        self.wgtBar.symbolChanged.connect(self.wgtChart.UpdateSymbol)
         print("showing")
         self.showMaximized()
         self.show()

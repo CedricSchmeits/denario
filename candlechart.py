@@ -80,7 +80,7 @@ class CandlestickItem(pg.GraphicsObject):
 
 
 class CandleChart(QWidget):
-    limit = 500
+    limit = 1000
 
     def __init__(self, parent=None):
         # Initialize UI
