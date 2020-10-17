@@ -14,6 +14,13 @@
   <property name="windowTitle">
    <string>Denario</string>
   </property>
+  <property name="windowIcon">
+   <iconset>
+    <normaloff>logo.svg</normaloff>logo.svg</iconset>
+  </property>
+  <property name="toolTip">
+   <string>Denario</string>
+  </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
     <item row="0" column="0">

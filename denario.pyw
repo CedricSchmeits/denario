@@ -52,10 +52,10 @@ class Denario(QMainWindow):
 def Main():
     config = Config()
 
-
     QtCore.QCoreApplication.setAttribute(QtCore.Qt.AA_X11InitThreads)
-    app = QApplication([])
-    app.setWindowIcon(QtGui.QIcon('denario.png'))
+    app = QApplication(sys.argv)
+    app.setWindowIcon(QtGui.QIcon('logo.svg'))
+    app.setApplicationName("Denario")
 
     # setting theme
     app.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt5'))
