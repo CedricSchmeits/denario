@@ -66,12 +66,18 @@
    </property>
    <widget class="QMenu" name="menutest">
     <property name="title">
-     <string>test</string>
+     <string>&amp;Help</string>
     </property>
+    <addaction name="actionAbout"/>
    </widget>
    <addaction name="menutest"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
+  <action name="actionAbout">
+   <property name="text">
+    <string>&amp;About</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
@@ -94,18 +100,25 @@
   </customwidget>
  </customwidgets>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>actionAbout</sender>
+   <signal>triggered()</signal>
+   <receiver>Denario</receiver>
+   <slot>OnAboutClicked()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>400</x>
+     <y>141</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
  <slots>
-  <slot>OnStartStopPressed()</slot>
-  <slot>OnCheckState()</slot>
-  <slot>OnAddTimeTracer()</slot>
-  <slot>OnShowTraceVariables()</slot>
-  <slot>OnAddTransferFunction()</slot>
-  <slot>OnAddTraceVar()</slot>
-  <slot>OnMoverIdChanged()</slot>
-  <slot>OnExport()</slot>
-  <slot>OnDelTraceVar(QListWidgetItem*)</slot>
-  <slot>OnImport()</slot>
-  <slot>OnAddFrequency()</slot>
+  <slot>OnAboutClicked()</slot>
  </slots>
 </ui>

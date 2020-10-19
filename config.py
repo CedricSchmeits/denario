@@ -21,13 +21,15 @@
 Configuration module of the denario package
 """
 
-__all__ = ["Config"]
+__all__ = ["Config", "__version__"]
 
 import json
 import os
 import argparse
 import sys
 from PyQt5.QtGui import QColor
+
+__version__ = "0.0.0"
 
 def _ShowLicense():
     print("""    Denario  Copyright (C) 2020  Cedric Schmeits <cedric@aerofx.nl>

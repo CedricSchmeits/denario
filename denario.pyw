@@ -26,12 +26,13 @@ import sys
 import warnings
 import pyqtgraph as pg
 from PyQt5 import QtCore, QtGui, uic
-from PyQt5.QtCore import QFile, QTextStream
+from PyQt5.QtCore import QFile, QTextStream, pyqtSlot
 from PyQt5.QtWidgets import QApplication, QMainWindow
 from PyQt5.uic import loadUi
 import qdarkstyle
 
 from denariotrader import DenarioTrader
+from about import AboutDlg
 from config import Config
 
 class Denario(QMainWindow):
@@ -47,6 +48,12 @@ class Denario(QMainWindow):
         print("showing")
         self.showMaximized()
         self.show()
+
+    @pyqtSlot()
+    def OnAboutClicked(self):
+        """Launch the about dialog."""
+        dlg = AboutDlg()
+        dlg.exec()
 
 
 def Main():
