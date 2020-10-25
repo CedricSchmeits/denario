@@ -20,10 +20,11 @@
 Module to show the selected symbols in tabbed bar
 """
 from PyQt5 import QtWidgets, QtCore
+from PyQt5.QtGui import QColor
 from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
 from PyQt5.QtWidgets import QTabBar, QWidget, QVBoxLayout, QHBoxLayout, QLabel
 
-from denariotrader import DenarioTrader
+from denariotrader import DenarioTrader, Exchange
 from config import Config
 
 class SymbolBar(QTabBar):
@@ -31,14 +32,27 @@ class SymbolBar(QTabBar):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.__updating = False
+        self.__config = Config()
+        self.__trader = DenarioTrader.GetInstance()
+        self.__trader.exchangeChanged.connect(self.OnExchangeChanged)
+
         self.setTabsClosable(True)
         self.setMovable(True)
         self.setShape(QTabBar.RoundedWest)
         self.tabCloseRequested.connect(self.OnCloseTab)
+        self.tabMoved.connect(self.OnTabMoved)
         self.currentChanged.connect(self.__OnCurrentChanged)
         self.__symbolWidgets = dict()
 
-        self.AddSymbol("BTC/USDT")
+        self.__LoadSymbols()
+
+    def __LoadSymbols(self):
+        exchange = self.__config['denario']['activeExchange']
+        if exchange not in self.__config['denario']['symbolbar']:
+            self.__config['denario']['symbolbar'][exchange] = list()
+        for symbol in self.__config['denario']['symbolbar'][exchange]:
+            self.AddSymbol(symbol)
 
     def tabSizeHint(self, index):
         s = QTabBar.tabSizeHint(self, index)
@@ -70,11 +84,23 @@ class SymbolBar(QTabBar):
 
     @pyqtSlot(int)
     def OnCloseTab (self, currentIndex: int):
-        print(f"OnCloseTab: {currentIndex}")
         widget = self.tabButton(currentIndex, QTabBar.LeftSide)
+        exchange = self.__config['denario']['activeExchange']
+        if widget.symbol in self.__config['denario']['symbolbar'][exchange]:
+            self.__config['denario']['symbolbar'][exchange].remove(widget.symbol)
+            Config.Save()
         #currentQWidget = self.widget(currentIndex)
         #currentQWidget.deleteLater()
         self.removeTab(currentIndex)
+
+    @pyqtSlot(int, int)
+    def OnTabMoved(self, fromIndex: int, toIndex: int ):
+        exchange = self.__config['denario']['symbolbar'][self.__config['denario']['activeExchange']]
+        if exchange:
+            symbol = exchange.pop(fromIndex)
+            exchange.insert(toIndex, symbol)
+            Config.Save()
+
 
     def AddSymbol(self, symbol: str) -> int:
         print(f"Adding Symbol {symbol}")
@@ -83,6 +109,10 @@ class SymbolBar(QTabBar):
 
         index = self.addTab(None)
         self.setTabButton(index, QTabBar.LeftSide, symbolWidget)
+        exchange = self.__config['denario']['activeExchange']
+        if symbol not in self.__config['denario']['symbolbar'][exchange]:
+            self.__config['denario']['symbolbar'][exchange].append(symbol)
+        Config.Save()
         return index
 
     @pyqtSlot(str)
@@ -99,12 +129,28 @@ class SymbolBar(QTabBar):
     @pyqtSlot(int)
     def __OnCurrentChanged(self, currentIndex: int):
         symbolWidget = self.tabButton(currentIndex, QTabBar.LeftSide)
-        if symbolWidget is not None:
+        if symbolWidget is not None and not self.__updating:
             self.symbolChanged.emit(symbolWidget.symbol)
 
+    @pyqtSlot(Exchange)
+    def OnExchangeChanged(self, exchange):
+        self.__updating = True
+        while self.count():
+            self.OnCloseTab(0)
+        self.__updating = False
+        self.__LoadSymbols()
+        self.__OnCurrentChanged(0)
+
+
 class TabSymbolWidget(QWidget):
+    __colors = None
     def __init__(self, symbol, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        if TabSymbolWidget.__colors is None:
+            config = Config()
+            TabSymbolWidget.__colors = dict(positive=config['pallet']['positive'],
+                                            negative=config['pallet']['negative'])
 
         self.__symbol = symbol
 
@@ -140,13 +186,22 @@ class TabSymbolWidget(QWidget):
     @pyqtSlot()
     def OnUpdateStats(self):
         trader = DenarioTrader.GetInstance()
-        ticker = trader.tickers[self.__symbol]
-        self.lblPrice.setText(f"{ticker['last']}")
-        self.lblPercentage.setText(f"{ticker['percentage']:.1f}%")
-        color = Config()['pallet']['positive'] if ticker['change'] >= 0 else Config()['pallet']['negative']
-        style = "QLabel {{ color : {}; }}".format(color.name())
-        self.lblPrice.setStyleSheet(style);
-        self.lblPercentage.setStyleSheet(style);
+        try:
+            ticker = trader.tickers[self.__symbol]
+            self.lblPrice.setText(f"{ticker['last']}")
+            if ticker['percentage'] != None:
+                self.lblPercentage.setText(f"{ticker['percentage']:.1f}%")
+            else:
+                self.lblPercentage.setText("")
+            if ticker['change'] != None:
+                color = self.__colors['positive'] if ticker['change'] >= 0 else self.__colors['negative']
+            else:
+                color = QColor(Qt.white)
+            style = "QLabel {{ color : {}; }}".format(color.name())
+            self.lblPrice.setStyleSheet(style);
+            self.lblPercentage.setStyleSheet(style);
+        except KeyError:
+            pass
 
     @property
     def symbol(self):

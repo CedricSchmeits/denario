@@ -23,11 +23,12 @@ Interface to the exchange
 
 __all__ = ["DenarioTrader"]
 
-from PyQt5.QtCore import QObject
+from PyQt5.QtCore import QObject, pyqtSignal
 
 from typing import Any, Dict
 from datetime import datetime, timedelta
 import ccxt
+from ccxt import Exchange
 from pandas import DataFrame, DatetimeIndex, to_datetime
 
 
@@ -36,6 +37,8 @@ from config import Config
 
 class DenarioTrader(QObject):
     """Trader class"""
+    exchangeChanged = pyqtSignal(Exchange)
+
     DEFAULT_DATAFRAME_COLUMNS = ['date', 'open', 'high', 'low', 'close', 'volume']
     __instance = None
 
@@ -51,20 +54,48 @@ class DenarioTrader(QObject):
         if DenarioTrader.__instance != None:
             raise Exception("This class is a singleton!")
         else:
+            super().__init__()
             DenarioTrader.__instance = self
 
-        # configure api key and secret for binance.com
-        exchangeClass = getattr(ccxt, Config()['exchange']['name'])
-        exchange = exchangeClass({'apiKey': Config()['exchange']['key'],
-                                  'secret': Config()['exchange']['secret'],
-                                  'timeout': 30000,
-                                  'enableRateLimit': True})
-        exchange.load_markets()
+        self.__exchanges = dict()
+        self.__LoadExchanges()
+        self.ReloadExchange()
 
-        # start a worker process to move the received stream_data from the stream_buffer to a print function
-        self.__exchange = exchange
-        self.__tickers = dict()
+    def __LoadExchanges(self):
+        for name in ccxt.exchanges:
+            try:
+                self.__exchanges[name] = getattr(ccxt, name)().describe()
+            except Exception as err:
+                print(f"exchange {name} failed with: {err}")
+
+    def ReloadExchange(self):
+        # configure api key and secret for binance.com
+        config = Config()
+        activeExchange = config['denario']['activeExchange']
+        if activeExchange:
+            for exchangeConfig in config['exchanges']:
+                if exchangeConfig['id'] == activeExchange:
+                    break
+            else:
+                exchangeConfig = None
+        else:
+            exchangeConfig = None
+
+        if exchangeConfig is not None:
+            exchangeClass = getattr(ccxt, exchangeConfig['id'].lower())
+            exchange = exchangeClass({'apiKey': exchangeConfig['key'],
+                                      'secret': exchangeConfig['secret'],
+                                      'timeout': 30000,
+                                      'enableRateLimit': True})
+            exchange.load_markets()
+
+            # start a worker process to move the received stream_data from the stream_buffer to a print function
+            self.__exchange = exchange
+        else:
+            self.__exchange = None
+
         self.UpdateTickers(True)
+        self.exchangeChanged.emit(self.exchange)
 
     def __Shutdown(self):
         """Shutdown method"""
@@ -75,33 +106,49 @@ class DenarioTrader(QObject):
         return self.__exchange
 
     @property
+    def exchanges(self):
+        return self.__exchanges
+
+    @property
     def tickers(self) -> Dict:
         return self.UpdateTickers()
 
     def UpdateTickers(self, force=False):
         """Updating of the tickers"""
-        if self.__exchange.has['fetchTickers']:
+        if self.__exchange is not None and self.__exchange.has['fetchTickers']:
             # Only update the tickers once every 5 minutes
             if force or (datetime.now() - self.__tickersUpdateTime) > timedelta(minutes=5):
                 self.__tickers = self.__exchange.fetchTickers()
                 self.__tickersUpdateTime = datetime.fromtimestamp(next(iter(self.__tickers.values()))['timestamp']/1000)
+        elif force:
+            self.__tickers = dict()
+
         return self.__tickers
 
     def GetOhlcv(self, symbol, *args, **kwargs) -> DataFrame:
         """
         :return: DataFrame
         """
-        ohlcv = self.__exchange.fetchOHLCV(symbol, *args, **kwargs)
-        df = DataFrame(ohlcv, columns=self.DEFAULT_DATAFRAME_COLUMNS)
+        if self.__exchange is not None:
+            ohlcv = self.__exchange.fetchOHLCV(symbol, *args, **kwargs)
+            df = DataFrame(ohlcv, columns=self.DEFAULT_DATAFRAME_COLUMNS)
 
-        df['date'] = to_datetime(df['date'], unit='ms') #, utc=True, infer_datetime_format=True)
+            df['date'] = to_datetime(df['date'], unit='ms') #, utc=True, infer_datetime_format=True)
 
-        # Some exchanges return int values for Volume and even for OHLC.
-        # Convert them since TA-LIB indicators used in the strategy assume floats
-        # and fail with exception...
-        df = df.astype(dtype={'open': 'float', 'high': 'float', 'low': 'float', 'close': 'float',
-                              'volume': 'float'})
+            # Some exchanges return int values for Volume and even for OHLC.
+            # Convert them since TA-LIB indicators used in the strategy assume floats
+            # and fail with exception...
+            df = df.astype(dtype={'open': 'float', 'high': 'float', 'low': 'float', 'close': 'float',
+                                  'volume': 'float'})
+        else:
+            df = DataFrame([], columns=self.DEFAULT_DATAFRAME_COLUMNS)
+
         return df
+
+    @classmethod
+    def SelectExchange(cls, newExchange):
+            symbolChanged = pyqtSignal(str)
+
 
     @classmethod
     def StartUp(cls, options):

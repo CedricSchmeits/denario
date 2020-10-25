@@ -18,9 +18,6 @@
    <iconset>
     <normaloff>logo.svg</normaloff>logo.svg</iconset>
   </property>
-  <property name="toolTip">
-   <string>Denario</string>
-  </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QGridLayout" name="gridLayout">
     <item row="0" column="0">
@@ -64,18 +61,40 @@
      <height>24</height>
     </rect>
    </property>
-   <widget class="QMenu" name="menutest">
+   <widget class="QMenu" name="menuHelp">
     <property name="title">
      <string>&amp;Help</string>
     </property>
     <addaction name="actionAbout"/>
    </widget>
-   <addaction name="menutest"/>
+   <widget class="QMenu" name="menuExchanges">
+    <property name="title">
+     <string>Exchanges</string>
+    </property>
+    <addaction name="separator"/>
+    <addaction name="actionExchangeEdit"/>
+   </widget>
+   <addaction name="menuExchanges"/>
+   <addaction name="menuHelp"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionAbout">
    <property name="text">
     <string>&amp;About</string>
+   </property>
+  </action>
+  <action name="actionExchangeEdit">
+   <property name="checkable">
+    <bool>false</bool>
+   </property>
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Edit</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+E</string>
    </property>
   </action>
  </widget>
@@ -105,7 +124,23 @@
    <sender>actionAbout</sender>
    <signal>triggered()</signal>
    <receiver>Denario</receiver>
-   <slot>OnAboutClicked()</slot>
+   <slot>OnAbout()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>400</x>
+     <y>141</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionExchangeEdit</sender>
+   <signal>triggered()</signal>
+   <receiver>Denario</receiver>
+   <slot>OnExchangeEdit()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>-1</x>
@@ -119,6 +154,7 @@
   </connection>
  </connections>
  <slots>
-  <slot>OnAboutClicked()</slot>
+  <slot>OnAbout()</slot>
+  <slot>OnExchangeEdit()</slot>
  </slots>
 </ui>

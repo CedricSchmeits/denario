@@ -26,7 +26,7 @@ from PyQt5.QtWidgets import QWidget
 from PyQt5.QtCore import Qt, QAbstractTableModel, QModelIndex, pyqtSlot, pyqtSignal
 from PyQt5.QtGui import QColor
 
-from denariotrader import DenarioTrader
+from denariotrader import DenarioTrader, Exchange
 from config import Config
 
 
@@ -39,6 +39,7 @@ class TreeSymbolModel(QAbstractTableModel):
         self.__columnCount = 2
         self.__exchange = exchange
         self.__trader = DenarioTrader.GetInstance()
+        self.__trader.exchangeChanged.connect(self.OnChangedExchange)
         self.__search = ""
         self.__sorting = (0, Qt.AscendingOrder)
 
@@ -63,6 +64,11 @@ class TreeSymbolModel(QAbstractTableModel):
         self.tickers = sorted(self.tickers, key=func, reverse=self.__sorting[1] != Qt.AscendingOrder)
         self.__rowCount = len(self.tickers)
         self.symbolsChanged.emit()
+
+    @pyqtSlot(Exchange)
+    def OnChangedExchange(self, exchange):
+        self.__exchange = exchange
+        self.OnSearchChanged(self.__search)
 
     def rowCount(self, parent: QModelIndex=QModelIndex()):
         return self.__rowCount

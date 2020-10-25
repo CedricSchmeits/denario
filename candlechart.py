@@ -26,7 +26,7 @@ from PyQt5.QtCore import Qt, QDateTime, QPointF, QRectF, pyqtSlot
 import pyqtgraph as pg
 from pandas import DataFrame
 
-from denariotrader import DenarioTrader
+from denariotrader import DenarioTrader, Exchange
 from timeaxis import DateTimeAxisItem
 import pickle
 from config import Config
@@ -93,6 +93,7 @@ class CandleChart(QWidget):
 
         self.__trader = DenarioTrader.GetInstance()
         self.__exchange = self.__trader.exchange
+        self.__trader.exchangeChanged.connect(self.OnExchangeChanged)
 
         self.__timeAxis = DateTimeAxisItem(self.timeDelta, orientation='bottom')
         self.__legends = self.gpvChart.addLegend(offset=(600, 10))
@@ -127,31 +128,38 @@ class CandleChart(QWidget):
 
     @pyqtSlot(str)
     def UpdateSymbol(self, symbol : str = None) -> None:
+        print(f"UpdateSymbol: {symbol}")
         if symbol is not None:
             self.symbol = symbol
-
-        ohlcv = self.__trader.GetOhlcv(self.symbol, timeframe=self.timeFrame, limit=self.limit)
-        precision = self.__exchange.markets[self.symbol]['precision']['price']
-        self.__hCrossLine.label.setFormat(f"{{value:.{precision}f}}")
 
         if self.__currentCandles is not None:
             self.gpvChart.removeItem(self.__currentCandles)
             self.__currentCandles = None
 
-        self.__currentCandles = CandlestickItem(ohlcv)
-        self.gpvChart.addItem(self.__currentCandles)
-        xMin = ohlcv.date.iloc[0].timestamp()
-        xMax = ohlcv.date.iloc[-1].timestamp()
-        xDelta = (xMax - xMin) * 0.02
-        yMin = ohlcv.low.min()
-        yMax = ohlcv.high.max()
-        yDelta = (yMax - yMin) * 0.2
-        self.__plotItem.setLimits(xMin=xMin - xDelta,
-                                  xMax=xMax + xDelta,
-                                  yMin=yMin - yDelta,
-                                  yMax=yMax + yDelta)
-        self.OnAutoZoom()
+        ohlcv = self.__trader.GetOhlcv(self.symbol, timeframe=self.timeFrame, limit=self.limit)
+        if self.__exchange is not None:
+            precision = self.__exchange.markets[self.symbol]['precision']['price']
+            self.__hCrossLine.label.setFormat(f"{{value:.{precision}f}}")
 
+            self.__currentCandles = CandlestickItem(ohlcv)
+            self.gpvChart.addItem(self.__currentCandles)
+            xMin = ohlcv.date.iloc[0].timestamp()
+            xMax = ohlcv.date.iloc[-1].timestamp()
+            xDelta = (xMax - xMin) * 0.02
+            yMin = ohlcv.low.min()
+            yMax = ohlcv.high.max()
+            yDelta = (yMax - yMin) * 0.2
+            self.__plotItem.setLimits(xMin=xMin - xDelta,
+                                      xMax=xMax + xDelta,
+                                      yMin=yMin - yDelta,
+                                      yMax=yMax + yDelta)
+            self.OnAutoZoom()
+
+    @pyqtSlot(Exchange)
+    def OnExchangeChanged(self, exchange):
+        print(f"OnExchangeChanged: {exchange}")
+        self.__exchange = exchange
+        self.symbol = None
 
     def mouseReleaseEvent(self, event):
         print(event)
@@ -166,24 +174,26 @@ class CandleChart(QWidget):
         QChartView.mouseReleaseEvent(self, event)
 
     def Crosshair(self, evt):
-        mousepoint = self.__plotItem.vb.mapSceneToView(evt[0])
+        if self.__currentCandles is not None:
+            mousepoint = self.__plotItem.vb.mapSceneToView(evt[0])
 
-        crossTime = datetime.fromtimestamp(mousepoint.x())
-        # pick the closest value in the current timeDelta
-        crossTime = min(self.__currentCandles.data.date, key=lambda x: abs(x - crossTime))
+            crossTime = datetime.fromtimestamp(mousepoint.x())
+            # pick the closest value in the current timeDelta
+            crossTime = min(self.__currentCandles.data.date, key=lambda x: abs(x - crossTime))
 
-        self.__vCrossLine.setPos(crossTime.timestamp())
-        self.__hCrossLine.setPos(mousepoint.y())
+            self.__vCrossLine.setPos(crossTime.timestamp())
+            self.__hCrossLine.setPos(mousepoint.y())
 
     def OnAutoZoom(self, toggled=None):
         toggled = self.btnAutoZoom.isChecked() if toggled is None else toggled
         if toggled:
-            self.btnAutoZoom.setStyleSheet("color: green;")
-            ranges = self.__plotItem.viewRange()
-            xMin = datetime.fromtimestamp(ranges[0][0])
-            xMax = datetime.fromtimestamp(ranges[0][1])
-            data = self.__currentCandles.data.where((self.__currentCandles.data.date >= xMin) & (self.__currentCandles.data.date <= xMax))
-            self.__plotItem.setYRange(data.low.min(), data.high.max())
+            if self.__currentCandles is not None:
+                self.btnAutoZoom.setStyleSheet("color: green;")
+                ranges = self.__plotItem.viewRange()
+                xMin = datetime.fromtimestamp(ranges[0][0])
+                xMax = datetime.fromtimestamp(ranges[0][1])
+                data = self.__currentCandles.data.where((self.__currentCandles.data.date >= xMin) & (self.__currentCandles.data.date <= xMax))
+                self.__plotItem.setYRange(data.low.min(), data.high.max())
         else:
             self.btnAutoZoom.setStyleSheet("color: white;")
 

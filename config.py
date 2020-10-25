@@ -120,7 +120,8 @@ class Config:
     @classmethod
     def __CreateEmptyConfig(cls):
         Config.__instance = dict()
-        Config.__instance['denario'] = dict(activeExchange="")
+        Config.__instance['denario'] = dict(activeExchange="",
+                                            symbolbar={})
         Config.__instance['exchanges'] = list()
         Config.__instance['telegram'] = dict(enabled=False,
                                              token="",
