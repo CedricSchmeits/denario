@@ -39,10 +39,18 @@ This is free software, and you are welcome to redistribute
 it under certain conditions;
 """)
 
+class ConfigJSONEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, QColor):
+            return o.name()
+
+        # Let the base class default method raise the TypeError
+        return json.JSONEncoder.default(self, o)
 
 class Config:
     """Basic configuration holder"""
     __instance = None
+    __configFile = None
 
     def __new__(cls):
         if Config.__instance is None:
@@ -68,6 +76,7 @@ class Config:
                 else:
                     sandbox = ".sandbox" if args.sandbox else ""
                     configFile = os.path.expanduser(f"~/.local/share/denario/config{sandbox}.json")
+                Config.__configFile = configFile
 
                 if os.path.exists(configFile):
                     print(f"Using configuration file: {configFile}")
@@ -75,13 +84,14 @@ class Config:
                         Config.__instance = json.load(fHandle)
                         if args.exchange:
                             Config.__instance['exchange']['name'] = args.exchange
-                        Config.FillPalletDefaults()
                 else:
-                    raise Exception("file {} does not exists".format(configFile))
+                    print("file {} does not exists, creating empty configuration".format(configFile))
+                    Config.__CreateEmptyConfig()
+                Config.__FillPalletDefaults()
         return Config.__instance
 
     @classmethod
-    def FillPalletDefaults(cls):
+    def __FillPalletDefaults(cls):
         if 'pallet' not in Config.__instance:
             Config.__instance['pallet'] = dict()
 
@@ -97,7 +107,7 @@ class Config:
 
         # convert pallet values to colors
         for name, color in Config.__instance['pallet'].items():
-            if isinstance(color, (list, tupple)):
+            if isinstance(color, (list, tuple)):
                 Config.__instance['pallet'][name] = QColor(*color)
             else:
                 Config.__instance['pallet'][name] = QColor(color)
@@ -107,6 +117,21 @@ class Config:
 
         Config.__instance['pallet'].update(defaultPallet)
 
+    @classmethod
+    def __CreateEmptyConfig(cls):
+        Config.__instance = dict()
+        Config.__instance['denario'] = dict(activeExchange="")
+        Config.__instance['exchanges'] = list()
+        Config.__instance['telegram'] = dict(enabled=False,
+                                             token="",
+                                             chatId="")
+        cls.Save()
+
+    @classmethod
+    def Save(cls):
+        if cls.__instance is not None:
+            with open(cls.__configFile, "w") as fp:
+                json.dump(cls.__instance, fp, indent=2, cls=ConfigJSONEncoder)
 
     def __getitem__(self, key):
         pass
