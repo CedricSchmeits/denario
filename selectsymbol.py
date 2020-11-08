@@ -47,6 +47,7 @@ class TreeSymbolModel(QAbstractTableModel):
         self.__oddColor = config['rowOdd']
         self.__evenColor = config['rowEven']
         self.OnSearchChanged("")
+        self.__trader.timer.timeout.connect(self.OnTimer)
 
     @pyqtSlot(str)
     def OnSearchChanged(self, search: str):
@@ -68,6 +69,10 @@ class TreeSymbolModel(QAbstractTableModel):
     @pyqtSlot(Exchange)
     def OnChangedExchange(self, exchange):
         self.__exchange = exchange
+        self.OnSearchChanged(self.__search)
+
+    @pyqtSlot()
+    def OnTimer(self):
         self.OnSearchChanged(self.__search)
 
     def rowCount(self, parent: QModelIndex=QModelIndex()):

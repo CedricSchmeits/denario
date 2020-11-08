@@ -23,7 +23,7 @@ Interface to the exchange
 
 __all__ = ["DenarioTrader"]
 
-from PyQt5.QtCore import QObject, pyqtSignal
+from PyQt5.QtCore import QObject, QTimer, pyqtSignal
 
 from typing import Any, Dict
 from datetime import datetime, timedelta
@@ -61,12 +61,20 @@ class DenarioTrader(QObject):
         self.__LoadExchanges()
         self.ReloadExchange()
 
+        # creating a timer object
+        self.timer = QTimer(self)
+        self.timer.start(301)
+
     def __LoadExchanges(self):
         for name in ccxt.exchanges:
             try:
                 self.__exchanges[name] = getattr(ccxt, name)().describe()
             except Exception as err:
                 print(f"exchange {name} failed with: {err}")
+
+    def __OnTimer(self):
+        if self.__exchange is not None:
+            self.__exchange.load_markets()
 
     def ReloadExchange(self):
         # configure api key and secret for binance.com

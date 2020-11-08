@@ -91,6 +91,8 @@ class SymbolBar(QTabBar):
             Config.Save()
         #currentQWidget = self.widget(currentIndex)
         #currentQWidget.deleteLater()
+        self.__trader.timer.timeout.disconnect(widget.OnUpdateStats)
+
         self.removeTab(currentIndex)
 
     @pyqtSlot(int, int)
@@ -106,6 +108,7 @@ class SymbolBar(QTabBar):
         print(f"Adding Symbol {symbol}")
 
         symbolWidget = TabSymbolWidget(symbol)
+        self.__trader.timer.timeout.connect(symbolWidget.OnUpdateStats)
 
         index = self.addTab(None)
         self.setTabButton(index, QTabBar.LeftSide, symbolWidget)
